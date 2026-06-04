@@ -2,7 +2,7 @@
 
 Hey, I'm **Paramveer** a Computer Engineering student at McMaster University (Co-op, Class of 2029) based in Hamilton, ON.
 
-I build things at the intersection of **software, hardware, and AI**  from real-time Chrome extensions and embedded spatial mapping systems to full-stack web platforms. Currently shipping an AI-powered Catan Coach and a real estate app called [LetMeKnock](https://github.com/paramveermt).
+I build things at the intersection of **software, hardware, and AI**  from real-time Chrome extensions and embedded spatial mapping systems to full-stack web platforms. Currently shipping an AI-powered Catan Coach.
 
 Proficient in Python, C/C++, JavaScript, TypeScript, MATLAB, R, and LaTeX  comfortable from bare-metal embedded systems all the way up to React/Next.js frontends.
 
