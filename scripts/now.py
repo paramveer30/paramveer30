@@ -13,8 +13,8 @@ USER = os.environ.get("GH_USER", "paramveer30")
 ROWS = 5
 
 
-def fetch():
-    req = urllib.request.Request(f"https://api.github.com/users/{USER}/events/public?per_page=100",
+def api(path):
+    req = urllib.request.Request(f"https://api.github.com{path}",
                                  headers={"Accept": "application/vnd.github+json", "User-Agent": USER})
     tok = os.environ.get("GITHUB_TOKEN")
     if tok:
@@ -23,31 +23,57 @@ def fetch():
         return json.load(r)
 
 
+def fetch():
+    return api(f"/users/{USER}/events/public?per_page=100")
+
+
+def head_message(full_repo, sha):
+    """the events feed can omit commit messages, so look the head commit up"""
+    if not sha or os.environ.get("NOW_OFFLINE"):
+        return None
+    try:
+        return api(f"/repos/{full_repo}/commits/{sha}")["commit"]["message"]
+    except Exception:
+        return None
+
+
 def rows_from(events):
     out, seen = [], set()
     for ev in events:
-        repo = ev["repo"]["name"].split("/")[-1]
-        if repo == USER:
+        try:
+            full = ev["repo"]["name"]
+            repo = full.split("/")[-1]
+            if repo == USER:
+                continue
+            ts = datetime.fromisoformat(ev["created_at"].replace("Z", "+00:00"))
+            p = ev.get("payload") or {}
+            kind = ev.get("type")
+            if kind == "PushEvent":
+                msgs = [c.get("message", "") for c in reversed(p.get("commits") or [])]
+                if not msgs:
+                    m = head_message(full, p.get("head"))
+                    branch = (p.get("ref") or "").split("/")[-1] or "main"
+                    msgs = [m or f"pushed to {branch}"]
+                for msg in msgs:
+                    msg = (msg or "").splitlines()[0] if msg else "update"
+                    if (repo, msg) in seen:
+                        continue
+                    seen.add((repo, msg))
+                    out.append((ts, "push", repo, msg))
+            elif kind == "CreateEvent" and p.get("ref_type") == "repository":
+                out.append((ts, "init", repo, p.get("description") or "new repository"))
+            elif kind == "PullRequestEvent" and p.get("action") in ("opened", "closed"):
+                pr = p.get("pull_request") or {}
+                out.append((ts, "pr", repo, pr.get("title") or f"pull request #{pr.get('number') or p.get('number', '')}"))
+            elif kind == "ReleaseEvent":
+                rel = p.get("release") or {}
+                out.append((ts, "release", repo, rel.get("name") or rel.get("tag_name") or "new release"))
+        except Exception:
             continue
-        ts = datetime.fromisoformat(ev["created_at"].replace("Z", "+00:00"))
-        p = ev.get("payload", {})
-        if ev["type"] == "PushEvent":
-            for c in reversed(p.get("commits", [])):
-                msg = c["message"].splitlines()[0]
-                key = (repo, msg)
-                if key in seen:
-                    continue
-                seen.add(key)
-                out.append((ts, "push", repo, msg))
-        elif ev["type"] == "CreateEvent" and p.get("ref_type") == "repository":
-            out.append((ts, "init", repo, p.get("description") or "new repository"))
-        elif ev["type"] == "PullRequestEvent" and p.get("action") in ("opened", "closed"):
-            out.append((ts, "pr", repo, p["pull_request"]["title"]))
-        elif ev["type"] == "ReleaseEvent":
-            out.append((ts, "release", repo, p["release"].get("name") or p["release"]["tag_name"]))
+        if len(out) >= ROWS * 3:
+            break
     out.sort(key=lambda r: r[0], reverse=True)
     return out[:ROWS]
-
 
 
 def clip(s, n):
