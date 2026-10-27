@@ -117,7 +117,9 @@ def main(out="assets"):
             events = json.load(f)
     else:
         events = fetch()
-    tpl = Template(render(rows_from(events), now))
+    rows = rows_from(events)
+    print(f"{len(events)} events, {len(rows)} rows:", [(k, r) for _, k, r, _ in rows])
+    tpl = Template(render(rows, now))
     os.makedirs(out, exist_ok=True)
     for th, vals in THEMES.items():
         with open(os.path.join(out, f"now-{th}.svg"), "w") as f:
