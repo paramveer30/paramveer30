@@ -7,7 +7,7 @@ from datetime import datetime, timezone
 from string import Template
 
 sys.path.insert(0, os.path.dirname(__file__))
-from gen import THEMES, T, e, svg  # noqa: E402
+from gen import THEMES, T, e, svg, panel  # noqa: E402
 
 USER = os.environ.get("GH_USER", "paramveer30")
 ROWS = 5
@@ -23,24 +23,6 @@ def fetch():
         return json.load(r)
 
 
-def get(url):
-    req = urllib.request.Request(url, headers={"Accept": "application/vnd.github+json", "User-Agent": USER})
-    tok = os.environ.get("GITHUB_TOKEN")
-    if tok:
-        req.add_header("Authorization", f"Bearer {tok}")
-    try:
-        with urllib.request.urlopen(req, timeout=20) as r:
-            return json.load(r)
-    except Exception:
-        return None
-
-
-def head_message(full, sha):
-    # the public events feed no longer lists commits, so look up the head commit
-    c = get(f"https://api.github.com/repos/{full}/commits/{sha}")
-    return c["commit"]["message"].splitlines()[0] if c else None
-
-
 def rows_from(events):
     out, seen = [], set()
     for ev in events:
@@ -50,11 +32,7 @@ def rows_from(events):
         ts = datetime.fromisoformat(ev["created_at"].replace("Z", "+00:00"))
         p = ev.get("payload", {})
         if ev["type"] == "PushEvent":
-            commits = p.get("commits")
-            if not commits and p.get("head"):
-                msg = head_message(ev["repo"]["name"], p["head"])
-                commits = [{"message": msg}] if msg else []
-            for c in reversed(commits or []):
+            for c in reversed(p.get("commits", [])):
                 msg = c["message"].splitlines()[0]
                 key = (repo, msg)
                 if key in seen:
@@ -64,7 +42,7 @@ def rows_from(events):
         elif ev["type"] == "CreateEvent" and p.get("ref_type") == "repository":
             out.append((ts, "init", repo, p.get("description") or "new repository"))
         elif ev["type"] == "PullRequestEvent" and p.get("action") in ("opened", "closed"):
-            out.append((ts, "pr", repo, (p.get("pull_request") or {}).get("title") or f"pull request #{p.get('number', '')}"))
+            out.append((ts, "pr", repo, p["pull_request"]["title"]))
         elif ev["type"] == "ReleaseEvent":
             out.append((ts, "release", repo, p["release"].get("name") or p["release"]["tag_name"]))
     out.sort(key=lambda r: r[0], reverse=True)
@@ -80,7 +58,7 @@ def render(rows, now):
     W = 1000
     H = 74 + max(1, len(rows)) * 30 + 20
     kind_col = {"push": "$l4", "init": "$l2", "pr": "$l1", "release": "$l3"}
-    b = [f'<rect x=".5" y=".5" width="{W-1}" height="{H-1}" rx="14" fill="$panel" stroke="$border"/>',
+    b = [panel(W, H),
          '<circle class="rx" cx="30" cy="25" r="5" fill="$ok"/>',
          T(44, 29, "RX", 11, "$ok", weight=700),
          T(70, 29, e(f"uart0 · 115200 baud · live from github.com/{USER}"), 11, "$dim"),

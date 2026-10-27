@@ -34,102 +34,306 @@ def T(x, y, s, size=12, fill="$fg", anchor="start", weight=None, extra=""):
 
 
 # ---------------------------------------------------------------- header
+LS = 'letter-spacing="1"'
+
+
+def rainbow(W, gid="rb", dur=6, x0=0):
+    return (f'<linearGradient id="{gid}" gradientUnits="userSpaceOnUse" x1="{x0}" y1="0" x2="{x0+W}" y2="0" '
+            'spreadMethod="repeat"><stop offset="0" stop-color="$l1"/><stop offset=".25" stop-color="$l3"/>'
+            '<stop offset=".5" stop-color="$l2"/><stop offset=".75" stop-color="$l4"/><stop offset="1" stop-color="$l1"/>'
+            f'<animateTransform attributeName="gradientTransform" type="translate" from="0 0" to="{W} 0" '
+            f'dur="{dur}s" repeatCount="indefinite"/></linearGradient>')
+
+
+def panel(W, H, rx=14):
+    return (f'<defs>{rainbow(W)}<clipPath id="pc"><rect width="{W}" height="{H}" rx="{rx}"/></clipPath></defs>'
+            f'<rect x=".5" y=".5" width="{W-1}" height="{H-1}" rx="{rx}" fill="$panel" stroke="$border"/>'
+            f'<rect clip-path="url(#pc)" width="{W}" height="3" fill="url(#rb)"/>')
+
+
+FX = (".fi{opacity:0;animation:fi .7s ease-out forwards}"
+      "@keyframes fi{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}"
+      ".pin{opacity:0;animation:pin 2.4s infinite}@keyframes pin{0%{opacity:0}8%{opacity:1}30%,100%{opacity:0}}")
+SPLINE = 'calcMode="spline" keyTimes="0;1" keySplines=".2 .7 .2 1"'
+
+
+def typed(x, y, n, cw, begin, dur, h=20):
+    """clip rect that types n characters, plus a cursor that follows it"""
+    vals = ";".join(f"{i*cw+(6 if i == n else 0):.1f}" for i in range(n + 1))
+    cvals = ";".join(f"{x+i*cw+2:.1f}" for i in range(n + 1))
+    clip = (f'<clipPath id="ty"><rect x="{x-2}" y="{y-h+5}" width="0" height="{h}">'
+            f'<animate attributeName="width" values="{vals}" calcMode="discrete" begin="{begin}s" dur="{dur}s" '
+            'fill="freeze"/></rect></clipPath>')
+    cur = (f'<rect class="blink" x="{x+2}" y="{y-11}" width="8" height="14" fill="$l4">'
+           f'<animate attributeName="x" values="{cvals}" calcMode="discrete" begin="{begin}s" dur="{dur}s" '
+           'fill="freeze"/></rect>')
+    return clip, cur
+
+
 def header():
     W, H = 1000, 300
-    b = [f'<rect x=".5" y=".5" width="{W-1}" height="{H-1}" rx="14" fill="$panel" stroke="$border"/>',
-         '<defs><pattern id="g" width="16" height="16" patternUnits="userSpaceOnUse">'
-         '<circle cx="2" cy="2" r="1" fill="$grid"/></pattern></defs>',
+    name = "PARAMVEER MULTANI"
+    nw = 456
+    b = [panel(W, H),
+         '<defs>', rainbow(nw, "ng", 7, 40),
+         '<filter id="gl" x="-10%" y="-40%" width="120%" height="180%"><feGaussianBlur stdDeviation="7"/></filter>',
+         '<filter id="gs" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="4"/></filter>',
+         '<radialGradient id="halo"><stop offset="0" stop-color="$l1" stop-opacity=".3">'
+         '<animate attributeName="stop-color" values="$l1;$l4;$l3;$l2;$l1" dur="12s" repeatCount="indefinite"/>'
+         '</stop><stop offset="1" stop-color="$l1" stop-opacity="0"/></radialGradient>',
+         '<pattern id="g" width="16" height="16" patternUnits="userSpaceOnUse">'
+         '<circle cx="2" cy="2" r="1" fill="$grid"/></pattern>',
+         f'<clipPath id="rv"><rect x="30" y="50" width="0" height="72"><animate attributeName="width" from="0" '
+         f'to="{nw+40}" begin=".2s" dur="1.4s" fill="freeze" {SPLINE}/></rect></clipPath>',
+         '<clipPath id="die"><rect x="720" y="92" width="150" height="136" rx="8"/></clipPath>',
+         '</defs>',
          '<rect x="600" y="46" width="390" height="244" fill="url(#g)"/>',
+         '<circle cx="795" cy="160" r="150" fill="url(#halo)"><animate attributeName="r" values="120;175;120" '
+         'dur="6s" repeatCount="indefinite"/></circle>',
          T(24, 28, "DATASHEET · U1 · PM-29", 11, "$dim", extra='letter-spacing="2"'),
          T(976, 28, "github.com/paramveer30 · rev 2026.10", 11, "$dim", "end"),
-         '<line x1="16" y1="42" x2="984" y2="42" stroke="$faint"/>',
-         '<text x="40" y="104" font-size="44" font-weight="700" fill="$fg" letter-spacing="1">'
-         'PARAMVEER <tspan fill="$l2">MULTANI</tspan></text>',
-         T(40, 134, "Computer Engineering Co-op · McMaster · Class of 2029", 14, "$dim")]
-    kv = [("FUNCTION", "builds from logic gates up to the browser", "$fg"),
-          ("STACK", "SystemVerilog · C · Python · TypeScript", "$fg"),
-          ("STATUS", "open to 2027 co-op terms", "$fg")]
-    for i, (k, v, c) in enumerate(kv):
+         '<line x1="16" y1="42" x2="984" y2="42" stroke="$faint"/>']
+    # name: wipe-in reveal with a light bar, then a slow colour sweep forever
+    txt = (f'x="40" y="102" font-size="42" font-weight="700" textLength="{nw}" lengthAdjust="spacing" '
+           f'fill="url(#ng)"')
+    b.append(f'<g clip-path="url(#rv)"><text {txt} filter="url(#gl)" opacity=".55">{name}</text>'
+             f'<text {txt}>{name}</text></g>')
+    b.append(f'<rect x="30" y="56" width="3" height="60" rx="1.5" fill="$fg">'
+             f'<animate attributeName="x" from="30" to="{nw+70}" begin=".2s" dur="1.4s" fill="freeze" {SPLINE}/>'
+             '<animate attributeName="opacity" from="1" to="0" begin="1.6s" dur=".3s" fill="freeze"/></rect>')
+    b.append(T(40, 134, "Computer Engineering Co-op · McMaster · Class of 2029", 14, "$dim",
+               extra='class="fi" style="animation-delay:1.2s"'))
+    rows = [("FUNCTION", T(140, 178, "builds from logic gates up to the browser", 13, "$fg")),
+            ("STACK", '<text x="140" y="202" font-size="13" fill="$dim"><tspan fill="$l1">SystemVerilog</tspan> · '
+                      '<tspan fill="$l2">C</tspan> · <tspan fill="$l3">Python</tspan> · '
+                      '<tspan fill="$l4">TypeScript</tspan></text>'),
+            ("STATUS", '<circle class="breathe" cx="146" cy="222" r="4" fill="$ok"/>' +
+                       T(158, 226, "open to 2027 co-op terms", 13, "$ok"))]
+    for i, (k, v) in enumerate(rows):
         y = 178 + i * 24
-        b.append(T(40, y, k, 12, "$dim", extra='letter-spacing="1"'))
-        if k == "STATUS":
-            b.append(f'<circle class="breathe" cx="146" cy="{y-4}" r="4" fill="$ok"/>')
-            b.append(T(158, y, e(v), 13, c))
-        else:
-            b.append(T(140, y, e(v), 13, c))
+        b.append(f'<g class="fi" style="animation-delay:{1.45+i*0.18:.2f}s">'
+                 f'{T(40, y, k, 12, "$dim", extra=LS)}{v}</g>')
     prompt = "param@mcmaster:~$ ./build --from=silicon --to=software"
-    b.append('<text x="40" y="266" font-size="13" fill="$dim"><tspan fill="$l4">param@mcmaster</tspan>'
-             ':~$$ ./build --from=silicon --to=software</text>')
-    b.append(f'<rect class="blink" x="{40+len(prompt)*7.8+4:.0f}" y="255" width="8" height="14" fill="$l4"/>')
+    cw = 7.8
+    clip, cur = typed(40, 266, len(prompt), cw, 2.2, 2.0)
+    b.append(f'<defs>{clip}</defs>')
+    b.append(f'<text x="40" y="266" font-size="13" fill="$dim" textLength="{len(prompt)*cw:.1f}" '
+             'lengthAdjust="spacing" clip-path="url(#ty)"><tspan fill="$l4">param@mcmaster</tspan>:~$$ '
+             '<tspan fill="$fg">./build</tspan> <tspan fill="$l1">--from=silicon</tspan> '
+             '<tspan fill="$l3">--to=software</tspan></text>')
+    b.append(cur)
 
     # chip
-    cx0, cy0, cw, ch = 720, 92, 150, 136
+    cx0, cy0, cw2, ch = 720, 92, 150, 136
+    pal = ["$l1", "$l3", "$l2", "$l4"]
     for i in range(6):
         x = cx0 + 17 + i * 23
         b.append(f'<line x1="{x}" y1="{cy0}" x2="{x}" y2="62" stroke="$faint" stroke-width="2"/>')
         b.append(f'<circle cx="{x}" cy="60" r="3" fill="$panel" stroke="$dim"/>')
         b.append(f'<line x1="{x}" y1="{cy0+ch}" x2="{x}" y2="258" stroke="$faint" stroke-width="2"/>')
         b.append(f'<circle cx="{x}" cy="260" r="3" fill="$panel" stroke="$dim"/>')
-        b.append(f'<rect x="{x-3}" y="{cy0-12}" width="6" height="12" fill="$l2"/>')
-        b.append(f'<rect x="{x-3}" y="{cy0+ch}" width="6" height="12" fill="$l2"/>')
+        for yy, d in ((cy0 - 12, i), (cy0 + ch, 11 - i)):
+            b.append(f'<rect x="{x-3}" y="{yy}" width="6" height="12" fill="$l2"/>')
+            b.append(f'<rect class="pin" x="{x-3}" y="{yy}" width="6" height="12" fill="{pal[i%4]}" '
+                     f'style="animation-delay:{d*0.2:.1f}s"/>')
     layers = [("web", "$l4"), ("ml", "$l3"), ("embedded", "$l2"), ("fpga", "$l1")]
     for i in range(4):
         py = cy0 + 26 + i * 28
         b.append(f'<rect x="{cx0-12}" y="{py-3}" width="12" height="6" fill="$l2"/>')
-        b.append(f'<rect x="{cx0+cw}" y="{py-3}" width="12" height="6" fill="$l2"/>')
-        # left trace to layer pad
+        b.append(f'<rect x="{cx0+cw2}" y="{py-3}" width="12" height="6" fill="$l2"/>')
         ty = 92 + i * 46
         d = f"M{cx0-12} {py} H682 L652 {ty} H614"
-        name, col = layers[i]
+        name_, col = layers[i]
         b.append(f'<path d="{d}" fill="none" stroke="$faint" stroke-width="2"/>')
         b.append(f'<path class="pulse" d="{d}" pathLength="100" fill="none" stroke="{col}" stroke-width="2.5" '
                  f'style="animation-delay:{-i*0.7:.1f}s"/>')
         b.append(f'<circle cx="608" cy="{ty}" r="5" fill="$panel" stroke="{col}" stroke-width="2"/>')
-        b.append(T(594, ty + 4, name, 11, col, "end"))
-        # right trace into connector
+        b.append(f'<circle class="breathe" cx="608" cy="{ty}" r="2.5" fill="{col}" '
+                 f'style="animation-delay:{-i*0.6:.1f}s"/>')
+        b.append(T(594, ty + 4, name_, 11, col, "end"))
         ry = 110 + i * 32
-        d2 = f"M{cx0+cw+12} {py} H902 L920 {ry} H940"
+        d2 = f"M{cx0+cw2+12} {py} H902 L920 {ry} H940"
         b.append(f'<path d="{d2}" fill="none" stroke="$faint" stroke-width="2"/>')
-        b.append(f'<path class="pulse" d="{d2}" pathLength="100" fill="none" stroke="$l2" stroke-width="2.5" '
+        b.append(f'<path class="pulse" d="{d2}" pathLength="100" fill="none" stroke="{col}" stroke-width="2.5" '
                  f'style="animation-delay:{-1.5-i*0.6:.1f}s"/>')
         b.append(f'<rect x="938" y="{ry-3}" width="8" height="6" fill="$l2"/>')
     b.append('<rect x="944" y="96" width="22" height="128" rx="3" fill="$panel2" stroke="$border"/>')
+    for i in range(4):
+        b.append(f'<rect class="breathe" x="950" y="{106+i*32}" width="10" height="8" rx="2" fill="{pal[i]}" '
+                 f'style="animation-delay:{-i*0.5:.1f}s"/>')
     b.append(T(955, 88, "J1", 10, "$dim", "middle"))
     b.append(T(955, 240, "OUT", 10, "$dim", "middle"))
-    b.append(f'<rect x="{cx0}" y="{cy0}" width="{cw}" height="{ch}" rx="8" fill="$panel2" stroke="$border" stroke-width="2"/>')
+    b.append(f'<rect x="{cx0}" y="{cy0}" width="{cw2}" height="{ch}" rx="8" fill="none" stroke="url(#rb)" '
+             'stroke-width="5" filter="url(#gs)" opacity=".8"/>')
+    b.append(f'<rect x="{cx0}" y="{cy0}" width="{cw2}" height="{ch}" rx="8" fill="$panel2" stroke="url(#rb)" '
+             'stroke-width="2"/>')
+    b.append('<g clip-path="url(#die)"><rect x="720" y="92" width="150" height="2" fill="$l4" opacity=".55">'
+             '<animate attributeName="y" values="92;226;92" dur="4s" repeatCount="indefinite"/></rect></g>')
     b.append(f'<circle cx="{cx0+13}" cy="{cy0+13}" r="3.5" fill="$dim"/>')
-    b.append(T(cx0 + cw / 2, 158, "PM-29", 26, "$fg", "middle", 700))
-    b.append(T(cx0 + cw / 2, 180, "McMaster · CE", 11, "$dim", "middle"))
-    b.append(T(cx0 + cw / 2, 198, "rev 3.0", 10, "$dim", "middle"))
-    b.append(T(cx0 + cw + 4, 82, "U1", 11, "$dim"))
+    b.append(T(cx0 + cw2 / 2, 158, "PM-29", 26, "url(#rb)", "middle", 700))
+    b.append(T(cx0 + cw2 / 2, 180, "McMaster · CE", 11, "$dim", "middle"))
+    b.append(T(cx0 + cw2 / 2, 198, "rev 3.0", 10, "$dim", "middle"))
+    b.append(T(cx0 + cw2 + 4, 82, "U1", 11, "$dim"))
     label = ("Paramveer Multani, Computer Engineering co-op at McMaster. "
              "Builds from logic gates up to the browser: FPGA, embedded C, machine learning and full stack.")
-    return svg(W, H, label, "".join(b))
+    return svg(W, H, label, "".join(b), FX)
+
+
+# ---------------------------------------------------------------- section banners + footer
+SECTIONS = {
+    "now": ("~/now", "# pulled live from github every 6 hours"),
+    "projects": ("~/projects", "# one card per layer, silicon up to product"),
+    "experience": ("~/experience", "# timing diagram, one channel per role"),
+    "stack": ("~/stack", "# where each tool actually gets used"),
+    "contributions": ("~/contributions", "# commit history, eaten daily"),
+}
+
+
+def section(title, note):
+    W, H = 1000, 56
+    tw = len(title) * 14.4
+    nx = 56 + tw + 18
+    rx = nx + len(note) * 7.2 + 18
+    b = [f'<defs>{rainbow(W)}{rainbow(tw, "tg", 5, 52)}</defs>',
+         T(26, 37, "&gt;", 22, "$l4", weight=700, extra='class="blink"'),
+         f'<text x="52" y="38" font-size="24" font-weight="700" fill="url(#tg)" textLength="{tw:.0f}" '
+         f'lengthAdjust="spacing">{e(title)}</text>',
+         T(nx, 36, e(note), 12, "$dim"),
+         f'<line x1="{rx:.0f}" y1="32" x2="{W-12}" y2="32" stroke="$faint" stroke-width="2"/>',
+         f'<line x1="{rx:.0f}" y1="32" x2="{W-12}" y2="32" stroke="url(#rb)" stroke-width="2" opacity=".9" '
+         f'stroke-dasharray="{(W-12-rx):.0f}" stroke-dashoffset="{(W-12-rx):.0f}">'
+         f'<animate attributeName="stroke-dashoffset" from="{(W-12-rx):.0f}" to="0" dur="1.6s" fill="freeze" '
+         f'{SPLINE}/></line>']
+    return svg(W, H, f"{title} {note.lstrip('# ')}", "".join(b))
+
+
+def footer():
+    W, H = 1000, 150
+    hobbies = ["basketball", "ufc", "chess", "hiking", "hip-hop", "horror movies", "catan"]
+    pal = ["$l1", "$l3", "$l2", "$l4"]
+    b = [panel(W, H),
+         '<text x="28" y="40" font-size="13" fill="$dim"><tspan fill="$l4">param@mcmaster</tspan>:~$$ '
+         '<tspan fill="$fg">make</tspan> <tspan fill="$l2">profile</tspan></text>',
+         '<rect x="28" y="54" width="944" height="6" rx="3" fill="$faint"/>',
+         '<rect x="28" y="54" width="0" height="6" rx="3" fill="url(#rb)">'
+         '<animate attributeName="width" values="0;944;944" keyTimes="0;.55;1" dur="6s" repeatCount="indefinite"/>'
+         '</rect>',
+         '<text x="28" y="84" font-size="12.5" fill="$dim"><tspan fill="$l1">silicon</tspan> · '
+         '<tspan fill="$l2">firmware</tspan> · <tspan fill="$l3">models</tspan> · '
+         '<tspan fill="$l4">product</tspan>  <tspan fill="$ok" font-weight="700">build ok</tspan>'
+         '  0 errors · 0 warnings</text>',
+         T(972, 84, "off the clock:", 11, "$dim", "end")]
+    x = 28
+    for i, h in enumerate(hobbies):
+        w = len(h) * 7.2 + 22
+        c = pal[i % 4]
+        b.append(f'<rect x="{x:.0f}" y="104" width="{w:.0f}" height="26" rx="13" fill="{c}" fill-opacity=".1" '
+                 f'stroke="{c}" stroke-opacity=".6"/>')
+        b.append(f'<rect class="pin" x="{x:.0f}" y="104" width="{w:.0f}" height="26" rx="13" fill="{c}" '
+                 f'fill-opacity=".28" style="animation-delay:{i*0.34:.2f}s"/>')
+        b.append(T(x + w / 2, 121, e(h), 12, c, "middle"))
+        x += w + 10
+    return svg(W, H, "Build successful. Off the clock: " + ", ".join(hobbies), "".join(b), FX)
 
 
 # ---------------------------------------------------------------- cards
 def card(layer, layer_name, repo, badge, title, sub, tags, visual, label, css=""):
     W, H = 480, 270
     col = LAYER[layer]
+    col2 = LAYER[str(int(layer) % 4 + 1)]
     tag = f"L{layer} {layer_name}"
-    b = [f'<rect x=".5" y=".5" width="{W-1}" height="{H-1}" rx="12" fill="$panel" stroke="$border"/>',
-         f'<rect x="1" y="18" width="3" height="{H-36}" rx="1.5" fill="{col}"/>',
+    b = [f'<defs><linearGradient id="cs" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="{W}" y2="0" '
+         f'spreadMethod="repeat"><stop offset="0" stop-color="{col}"/><stop offset=".5" stop-color="{col2}"/>'
+         f'<stop offset="1" stop-color="{col}"/><animateTransform attributeName="gradientTransform" type="translate" '
+         f'from="0 0" to="{W} 0" dur="5s" repeatCount="indefinite"/></linearGradient>'
+         f'<radialGradient id="cg" cx="1" cy="0" r="1"><stop offset="0" stop-color="{col}" stop-opacity=".18"/>'
+         f'<stop offset=".65" stop-color="{col}" stop-opacity="0"/></radialGradient>'
+         f'<clipPath id="pc"><rect width="{W}" height="{H}" rx="12"/></clipPath></defs>',
+         f'<rect x=".5" y=".5" width="{W-1}" height="{H-1}" rx="12" fill="$panel" stroke="{col}" stroke-opacity=".45"/>',
+         f'<rect clip-path="url(#pc)" width="{W}" height="{H}" fill="url(#cg)"/>',
+         f'<rect clip-path="url(#pc)" width="{W}" height="3" fill="url(#cs)"/>',
+         f'<rect x="1" y="18" width="3" height="{H-36}" rx="1.5" fill="url(#cs)"/>',
          T(20, 29, e(tag), 11, col, weight=700, extra='letter-spacing="1"'),
          T(20 + len(tag) * 7.7 + 10, 29, e("· " + repo), 11, "$dim")]
     bw = len(badge) * 6.7 + 18
-    b.append(f'<rect x="{W-20-bw:.0f}" y="15" width="{bw:.0f}" height="19" rx="9.5" fill="none" stroke="{col}"/>')
+    b.append(f'<rect x="{W-20-bw:.0f}" y="15" width="{bw:.0f}" height="19" rx="9.5" fill="{col}" fill-opacity=".12" '
+             f'stroke="{col}"/>')
     b.append(T(W - 20 - bw / 2, 28.5, e(badge), 11, col, "middle"))
     b.append(f'<line x1="20" y1="44" x2="{W-20}" y2="44" stroke="$faint" stroke-dasharray="2 4"/>')
     b.append(f'<g transform="translate(20,54)">{visual}</g>')
     b.append(T(20, 200, e(title), 20, "$fg", weight=700))
-    b.append(T(20, 222, e(sub), 12.5, "$dim"))
+    b.append(f'<rect x="20" y="206" width="28" height="2" rx="1" fill="url(#cs)"/>')
+    b.append(T(20, 224, e(sub), 12.5, "$dim"))
     x = 20
     for t in tags:
         w = len(t) * 7 + 16
-        b.append(f'<rect x="{x}" y="236" width="{w}" height="20" rx="4" fill="$panel2" stroke="$faint"/>')
-        b.append(T(x + w / 2, 250, e(t), 11, "$dim", "middle"))
+        b.append(f'<rect x="{x}" y="236" width="{w}" height="20" rx="4" fill="{col}" fill-opacity=".1" '
+                 f'stroke="{col}" stroke-opacity=".45"/>')
+        b.append(T(x + w / 2, 250, e(t), 11, "$fg", "middle"))
         x += w + 6
     return svg(W, H, label, "".join(b), css)
+
+
+def _bez(p0, p1, p2, p3, t):
+    u = 1 - t
+    return (u**3*p0[0] + 3*u*u*t*p1[0] + 3*u*t*t*p2[0] + t**3*p3[0],
+            u**3*p0[1] + 3*u*u*t*p1[1] + 3*u*t*t*p2[1] + t**3*p3[1])
+
+
+AERO_TOP = [((8, 86), (8, 74), (14, 66), (34, 62)),
+            ((34, 62), (46, 60), (58, 58), (70, 56)),
+            ((70, 56), (88, 44), (108, 34), (134, 32)),
+            ((134, 32), (160, 31), (182, 42), (204, 58)),
+            ((204, 58), (210, 62), (214, 64), (218, 66)),
+            ((218, 66), (224, 72), (224, 82), (220, 88))]
+
+
+def v_aero():
+    s = []
+    pts = []
+    for seg in AERO_TOP:
+        for k in range(10):
+            pts.append(_bez(*seg, k / 10))
+    pts.append(AERO_TOP[-1][3])
+    body = "M" + " L".join(f"{x:.1f} {y:.1f}" for x, y in pts) + " L8 88 Z"
+    # streamlines that hug the body, offset upward
+    for k, (off, c) in enumerate([(10, "$l4"), (22, "$l1"), (34, "$l4"), (46, "$l1")]):
+        line = [(-8, 86 - off * 0.55)]
+        for x, y in pts[::3]:
+            if x <= 212:
+                line.append((x, y - off))
+        line.append((236, line[-1][1] + 10 - off * 0.15))
+        d = "M" + " L".join(f"{x:.1f} {max(2, y):.1f}" for x, y in line)
+        s.append(f'<path d="{d}" fill="none" stroke="$faint" stroke-width="1.2" stroke-linejoin="round"/>')
+        s.append(f'<path class="fl" d="{d}" fill="none" stroke="{c}" stroke-width="1.6" stroke-linejoin="round" '
+                 f'style="animation-delay:{-k*0.3:.1f}s"/>')
+    s.append(f'<path d="{body}" fill="$panel2" stroke="$border"/>')
+    s.append('<path d="M84 52 L108 40 C120 36 132 36 140 38 L146 52 Z" fill="$faint"/>')
+    # surface pressure points: high at the nose, low over the roof
+    for i, (x, y) in enumerate(pts[1:-1:2]):
+        c = "$l3" if x < 50 else "$l2" if x < 105 else "$l4" if x < 190 else "$l1"
+        s.append(f'<circle class="pd" cx="{x:.1f}" cy="{y:.1f}" r="2.2" fill="{c}" '
+                 f'style="animation-delay:{x/120:.2f}s"/>')
+    s.append('<line x1="-4" y1="98" x2="232" y2="98" stroke="$faint"/>')
+    for wx in (54, 176):
+        s.append(f'<circle cx="{wx}" cy="88" r="10" fill="$panel" stroke="$dim" stroke-width="2"/>'
+                 f'<circle cx="{wx}" cy="88" r="3" fill="$dim"/>')
+    s.append(T(0, 114, "Cp: nose high · roof low", 9.5, "$dim"))
+    s.append('<rect x="246" y="2" width="194" height="96" rx="6" fill="$panel2" stroke="$faint"/>')
+    lines = [(256, 20, '<tspan fill="$dim">agent loop · trust gated</tspan>', 9.5),
+             (256, 42, '<tspan fill="$l1">propose</tspan>  roof −8 mm', 11.5),
+             (256, 62, '<tspan fill="$l3">predict</tspan>  Cd 0.287 ± 0.006', 11.5),
+             (256, 82, '<tspan fill="$ok">gate</tspan>     pass · 0.25 ms', 11.5)]
+    for i, (x, y, t, sz) in enumerate(lines):
+        s.append(f'<text x="{x}" y="{y}" font-size="{sz}" fill="$fg" xml:space="preserve" class="ln" '
+                 f'style="animation-delay:{i*0.7:.1f}s">{t}</text>')
+    s.append(T(440, 114, "R² 0.868 on unseen car designs", 9.5, "$dim", "end"))
+    return "".join(s)
+
+
+AERO_CSS = (".fl{stroke-dasharray:6 12;animation:fl 1.1s linear infinite}@keyframes fl{to{stroke-dashoffset:-18}}"
+            ".pd{animation:pd 2.2s ease-in-out infinite}@keyframes pd{50%{opacity:.25}}"
+            ".ln{opacity:0;animation:ln 7s infinite}@keyframes ln{0%{opacity:0}8%,85%{opacity:1}95%,100%{opacity:0}}")
 
 
 FADE = (".em{opacity:0;animation:em 14s infinite}@keyframes em{0%,12%{opacity:1}14.3%,100%{opacity:0}}"
@@ -417,6 +621,11 @@ CARDS = {
                            "companion robot that reads emotion from voice, face and words",
                            ["Python", "MELD", "multimodal", "local inference"], v_attune(),
                            "Attune: emotion-aware companion robot that fuses audio, video and text on-device", FADE),
+    "aero": lambda: card("3", "ML", "Aero-Surrogate", "hackathon", "Aero Surrogate",
+                         "car drag in 0.25 ms, not hours of CFD, with a trust gate",
+                         ["PyTorch", "FastAPI", "three.js", "Nemotron"], v_aero(),
+                         "Aero Surrogate: neural surrogate that predicts car drag in about 0.25 ms, steered by a design agent",
+                         AERO_CSS),
     "hexcoach": lambda: card("3", "ML", "Hex-Coach", "live game", "Hexcoach",
                              "rules engine and AI coach that reads live game state",
                              ["Python", "FastAPI", "TypeScript", "MessagePack"], v_hex(),
@@ -499,7 +708,7 @@ def experience():
     b.append(f'<line x1="{nx:.1f}" y1="40" x2="{nx:.1f}" y2="{H-10}" stroke="$dim" stroke-dasharray="3 3"/>')
     b.append(T(nx - 6, 30, "now", 10, "$dim", "end"))
     b.append(f'<line class="scan" x1="{x0}" y1="44" x2="{x0}" y2="{H-10}" stroke="$l4" stroke-opacity=".45" stroke-width="1.5"/>')
-    body = f'<rect x=".5" y=".5" width="{W-1}" height="{H-1}" rx="14" fill="$panel" stroke="$border"/>' + "".join(b)
+    body = panel(W, H) + "".join(b)
     css = (".scan{animation:scan 9s linear infinite}"
            f"@keyframes scan{{from{{transform:translateX(0)}}to{{transform:translateX({x1-x0}px)}}}}")
     label = ("Experience: Machine Learning Engineer at Mac-AI (2026 to now), Calibration and Test Engineering Intern "
@@ -511,8 +720,8 @@ def experience():
 def stack():
     W = 1000
     layers = [
-        ("4", "PRODUCT", ["TypeScript", "React", "Next.js", "FastAPI", "Socket.IO"], "→ HousingHub · Simcoe CC · Hexcoach"),
-        ("3", "ML", ["Python", "PyTorch", "scikit-learn", "pandas"], "→ Attune · Mac-AI · Hoskin"),
+        ("4", "PRODUCT", ["TypeScript", "React", "Next.js", "FastAPI", "Socket.IO"], "→ HousingHub · Simcoe CC · Aero UI"),
+        ("3", "ML", ["Python", "PyTorch", "scikit-learn", "pandas"], "→ Attune · Aero Surrogate · Mac-AI"),
         ("2", "EMBEDDED", ["C", "Cortex-M4F", "UART", "I²C", "PCB debug"], "→ LIDAR · Baggage Sorter"),
         ("1", "SILICON", ["SystemVerilog", "FPGA", "DE2-115", "Quartus"], "→ JPEG Decompressor"),
     ]
@@ -537,12 +746,12 @@ def stack():
         x = 262
         for t in tools:
             w = len(t) * 7.4 + 20
-            b.append(f'<rect x="{x:.0f}" y="{y+18}" width="{w:.0f}" height="22" rx="4" fill="$panel" stroke="{c}" stroke-opacity=".5"/>')
+            b.append(f'<rect x="{x:.0f}" y="{y+18}" width="{w:.0f}" height="22" rx="4" fill="{c}" fill-opacity=".1" stroke="{c}" stroke-opacity=".6"/>')
             b.append(T(x + w / 2, y + 33, e(t), 11.5, "$fg", "middle"))
             x += w + 8
         b.append(T(944, y + 34, e(used), 11, "$dim", "end"))
     H = bottom + 20
-    body = f'<rect x=".5" y=".5" width="{W-1}" height="{H-1}" rx="14" fill="$panel" stroke="$border"/>' + "".join(b)
+    body = panel(W, H) + "".join(b)
     css = ".hl{opacity:0;animation:hl 3s infinite}@keyframes hl{0%{opacity:0}6%{opacity:1}32%{opacity:0}}"
     label = ("Tech stack by layer. Product: TypeScript, React, Next.js, FastAPI, Socket.IO. ML: Python, PyTorch, "
              "scikit-learn, pandas. Embedded: C, Cortex-M4F, UART, I2C. Silicon: SystemVerilog, FPGA, Quartus.")
@@ -554,6 +763,9 @@ def main(out):
     os.makedirs(out, exist_ok=True)
     items = {"header": header, "experience": experience, "stack": stack}
     items.update({f"card-{k}": v for k, v in CARDS.items()})
+    items["footer"] = footer
+    for k, (t, n) in SECTIONS.items():
+        items[f"section-{k}"] = (lambda t=t, n=n: section(t, n))
     for name, fn in items.items():
         tpl = Template(fn())
         for th, vals in THEMES.items():
