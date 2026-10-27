@@ -8,7 +8,7 @@
 
 <picture><source media="(prefers-color-scheme: dark)" srcset="assets/section-now-dark.svg"><img width="100%" src="assets/section-now-light.svg" alt="~/now"></picture>
 
-<picture><source media="(prefers-color-scheme: dark)" srcset="assets/now-dark.svg"><img width="100%" src="assets/now-light.svg" alt="Recent public GitHub activity, refreshed every 6 hours"></picture>
+<picture><source media="(prefers-color-scheme: dark)" srcset="assets/now-dark.svg"><img width="100%" src="assets/now-light.svg" alt="Recent public GitHub activity, refreshed daily"></picture>
 
 <picture><source media="(prefers-color-scheme: dark)" srcset="assets/section-projects-dark.svg"><img width="100%" src="assets/section-projects-light.svg" alt="~/projects"></picture>
 
